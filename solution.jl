@@ -73,13 +73,13 @@ function floyd_worker_barrier!(Cw, comm)
     rank = MPI.Comm_rank(comm)
     nranks = MPI.Comm_size(comm) # Comm_size? or (n / m)?
     m, n = size(Cw)
-    rows_w = rank * m + 1 : (rank + 1) * m
+    rows_w = rank*m+1:(rank+1)*m
     Ck = similar(Cw, n) # similar? or ones?
-    for k in 1 : n
+    for k in 1:n
         if k in rows_w
             myk = (k - first(rows_w)) + 1
             Ck .= view(Cw, myk, :)
-            for proc in 0 : nranks - 1
+            for proc in 0:nranks-1
                 if proc != rank
                     MPI.Send(Ck, comm; dest=proc, tag=0)
                 end
@@ -87,9 +87,9 @@ function floyd_worker_barrier!(Cw, comm)
         else
             MPI.Recv!(Ck, comm; source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG)
         end
-        for j in 1 : n
+        for j in 1:n
             Ckj = Ck[j]
-            for i in 1 : m
+            for i in 1:m
                 @inbounds Cw[i, j] = min(Cw[i, j], Cw[i, k] + Ckj)
             end
         end
@@ -102,7 +102,26 @@ function floyd_worker_bcast!(Cw, comm)
     # Implement here your solution for method 2 of Floyd's parallel algotrithm #
     # Attetion: the worker who is sending needs be the root of the Broadcast #
     # You are only allowed to use the MPI.Bcast! collective for this part #
-
+    rank = MPI.Comm_rank(comm)
+    nranks = MPI.Comm_size(comm) # Comm_size? or (n / m)?
+    m, n = size(Cw)
+    rows_w = rank*m+1:(rank+1)*m
+    Ck = similar(Cw, n) # similar? or ones?
+    for k in 1:n
+        if k in rows_w
+            myk = (k - first(rows_w)) + 1
+            Ck .= view(Cw, myk, :)
+            MPI.Bcast!(Ck, comm; root=rank)
+        end
+        for j in 1:n
+            Ckj = Ck[j]
+            for i in 1:m
+                @inbounds Cw[i, j] = min(Cw[i, j], Cw[i, k] + Ckj)
+            end
+        end
+        MPI.Barrier(comm)
+    end
+    Cw
 end
 
 function floyd_worker_status!(Cw, comm)
