@@ -118,7 +118,6 @@ function floyd_worker_bcast!(Cw, comm)
                 @inbounds Cw[i, j] = min(Cw[i, j], Cw[i, k] + Ckj)
             end
         end
-        MPI.Barrier(comm)
     end
     Cw
 end
