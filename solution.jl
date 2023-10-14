@@ -103,7 +103,6 @@ function floyd_worker_bcast!(Cw, comm)
     # Attetion: the worker who is sending needs be the root of the Broadcast #
     # You are only allowed to use the MPI.Bcast! collective for this part #
     rank = MPI.Comm_rank(comm)
-    nranks = MPI.Comm_size(comm) # Comm_size? or (n / m)?
     m, n = size(Cw)
     rows_w = rank*m+1:(rank+1)*m
     Ck = similar(Cw, n) # similar? or ones?
@@ -111,8 +110,8 @@ function floyd_worker_bcast!(Cw, comm)
         if k in rows_w
             myk = (k - first(rows_w)) + 1
             Ck .= view(Cw, myk, :)
-            MPI.Bcast!(Ck, comm; root=rank)
         end
+        MPI.Bcast!(Ck, comm; root=rank)
         for j in 1:n
             Ckj = Ck[j]
             for i in 1:m
