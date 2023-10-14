@@ -3,7 +3,7 @@ using JSON
 MPI.Init()
 
 function rand_distance_table(N)
-    threshold = 0.2ß
+    threshold = 0.2
     mincost = 3
     maxcost = 10
     infinity = 10000 * maxcost
@@ -70,7 +70,32 @@ function floyd_worker_barrier!(Cw, comm)
     # Your MPI.Send can use any tag that you wish #
     # Your MPI.Recv! can only use  MPI.ANY_SOURCE as source, and MPI.ANY_TAG as tag values #
     # You are only allowed to use MPI.Send, MPI.Recv! and MPI.Barrier for this part#
-
+    rank = MPI.Comm_rank(comm)
+    nranks = MPI.Comm_size(comm) # Comm_size? or (n / m)?
+    m, n = size(Cw)
+    rows_w = rank * m + 1 : (rank + 1) * m
+    Ck = similar(Cw, n) # similar? or ones?
+    for k in 1 : n
+        if k in rows_w
+            myk = (k - first(rows_w)) + 1
+            Ck .= view(Cw, myk, :)
+            for proc in 0 : nranks - 1
+                if proc != rank
+                    MPI.Send(Ck, comm; dest=proc, tag=0)
+                end
+            end
+        else
+            MPI.Recv!(Ck, comm; source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG)
+        end
+        for j in 1 : n
+            Ckj = Ck[j]
+            for i in 1 : m
+                @inbounds Cw[i, j] = min(Cw[i, j], Cw[i, k] + Ckj)
+            end
+        end
+        MPI.Barrier(comm)
+    end
+    Cw
 end
 
 function floyd_worker_bcast!(Cw, comm)
