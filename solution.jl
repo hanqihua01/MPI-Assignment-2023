@@ -134,22 +134,23 @@ function floyd_worker_status!(Cw, comm)
     rows_w = rank*m+1:(rank+1)*m
     Ck = similar(Cw, n) # similar? or ones?
     for k in 1:n
+        kk = k
         if k in rows_w
             myk = (k - first(rows_w)) + 1
             Ck .= view(Cw, myk, :)
             for proc in 0:nranks-1
                 if proc != rank
-                    MPI.Send(Ck, comm; dest=proc, tag=0)
+                    MPI.Send(Ck, comm; dest=proc, tag=k)
                 end
             end
         else
-            status = MPI.Status()
-            MPI.Recv!(Ck, MPI.ANY_SOURCE, MPI.ANY_TAG, comm, status)
+            data, status = MPI.Recv!(Ck, comm, MPI.Status; source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG)
+            kk = status.tag
         end
         for j in 1:n
             Ckj = Ck[j]
             for i in 1:m
-                @inbounds Cw[i, j] = min(Cw[i, j], Cw[i, k] + Ckj)
+                @inbounds Cw[i, j] = min(Cw[i, j], Cw[i, kk] + Ckj)
             end
         end
     end
@@ -219,5 +220,5 @@ function main_run(; N, method, R)
 end
 
 # mpiexec(cmd->run(`$cmd -np 3 julia solution.jl`))
-main_check(; N=9, method=2)
+main_check(; N=9, method=3)
 # main_run(; N=9, method=2, R=10)
