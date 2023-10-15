@@ -218,7 +218,3 @@ function main_run(; N, method, R)
         end
     end
 end
-
-# mpiexec(cmd->run(`$cmd -np 3 julia solution.jl`))
-main_check(; N=9, method=3)
-# main_run(; N=9, method=2, R=10)
