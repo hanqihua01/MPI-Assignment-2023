@@ -111,7 +111,7 @@ function floyd_worker_bcast!(Cw, comm)
             myk = (k - first(rows_w)) + 1
             Ck .= view(Cw, myk, :)
         end
-        MPI.Bcast!(Ck, comm; root=rank)
+        MPI.Bcast!(Ck, comm; root=div(k - 1, m))
         for j in 1:n
             Ckj = Ck[j]
             for i in 1:m
@@ -128,7 +128,32 @@ function floyd_worker_status!(Cw, comm)
     # Your MPI.Recv! can only use  MPI.ANY_SOURCE as source, and MPI.ANY_TAG as tag values #
     # You can use MPI.STATUS in your MPI.RECV! #
     # You are only allowed to use MPI.Send and MPI.Recv! and MPI.Status #
-
+    rank = MPI.Comm_rank(comm)
+    nranks = MPI.Comm_size(comm) # Comm_size? or (n / m)?
+    m, n = size(Cw)
+    rows_w = rank*m+1:(rank+1)*m
+    Ck = similar(Cw, n) # similar? or ones?
+    for k in 1:n
+        if k in rows_w
+            myk = (k - first(rows_w)) + 1
+            Ck .= view(Cw, myk, :)
+            for proc in 0:nranks-1
+                if proc != rank
+                    MPI.Send(Ck, comm; dest=proc, tag=0)
+                end
+            end
+        else
+            status = MPI.Status()
+            MPI.Recv!(Ck, MPI.ANY_SOURCE, MPI.ANY_TAG, comm, status)
+        end
+        for j in 1:n
+            Ckj = Ck[j]
+            for i in 1:m
+                @inbounds Cw[i, j] = min(Cw[i, j], Cw[i, k] + Ckj)
+            end
+        end
+    end
+    Cw
 end
 
 const methods = (
@@ -193,3 +218,6 @@ function main_run(; N, method, R)
     end
 end
 
+# mpiexec(cmd->run(`$cmd -np 3 julia solution.jl`))
+main_check(; N=9, method=2)
+# main_run(; N=9, method=2, R=10)
