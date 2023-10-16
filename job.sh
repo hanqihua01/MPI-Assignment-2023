@@ -24,4 +24,3 @@ julia --project=. -e '
     include("solution.jl")
     main_run(R=5,N=3200,method=0)
 '
-
