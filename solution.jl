@@ -71,7 +71,7 @@ function floyd_worker_barrier!(Cw, comm)
     # Your MPI.Recv! can only use  MPI.ANY_SOURCE as source, and MPI.ANY_TAG as tag values #
     # You are only allowed to use MPI.Send, MPI.Recv! and MPI.Barrier for this part#
     rank = MPI.Comm_rank(comm)
-    nranks = MPI.Comm_size(comm)
+    nranks = MPI.Comm_size(comm) # or div(n, m)?
     m, n = size(Cw)
     rows_w = rank*m+1:(rank+1)*m
     Ck = similar(Cw, n)
@@ -129,7 +129,7 @@ function floyd_worker_status!(Cw, comm)
     # You can use MPI.STATUS in your MPI.RECV! #
     # You are only allowed to use MPI.Send and MPI.Recv! and MPI.Status #
     rank = MPI.Comm_rank(comm)
-    nranks = MPI.Comm_size(comm)
+    nranks = MPI.Comm_size(comm) # or div(n, m)?
     m, n = size(Cw)
     rows_w = rank*m+1:(rank+1)*m
     Ck = similar(Cw, n)
