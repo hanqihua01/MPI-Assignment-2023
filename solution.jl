@@ -87,9 +87,9 @@ function floyd_worker_barrier!(Cw, comm)
         else
             MPI.Recv!(Ck, comm; source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG)
         end
-        for j in 1:n
+        @simd for j in 1:n
             Ckj = Ck[j]
-            for i in 1:m
+            @simd for i in 1:m
                 @inbounds Cw[i, j] = min(Cw[i, j], Cw[i, k] + Ckj)
             end
         end
@@ -112,9 +112,9 @@ function floyd_worker_bcast!(Cw, comm)
             Ck .= view(Cw, myk, :)
         end
         MPI.Bcast!(Ck, comm; root=div(k - 1, m))
-        for j in 1:n
+        @simd for j in 1:n
             Ckj = Ck[j]
-            for i in 1:m
+            @simd for i in 1:m
                 @inbounds Cw[i, j] = min(Cw[i, j], Cw[i, k] + Ckj)
             end
         end
@@ -147,9 +147,9 @@ function floyd_worker_status!(Cw, comm)
             data, status = MPI.Recv!(Ck, comm, MPI.Status; source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG)
             kk = status.tag
         end
-        for j in 1:n
+        @simd for j in 1:n
             Ckj = Ck[j]
-            for i in 1:m
+            @simd for i in 1:m
                 @inbounds Cw[i, j] = min(Cw[i, j], Cw[i, kk] + Ckj)
             end
         end
